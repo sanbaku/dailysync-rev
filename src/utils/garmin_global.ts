@@ -14,6 +14,7 @@ import _ from 'lodash';
 import { getSessionFromDB, getSyncCursor, initDB, saveSessionToDB, setSyncCursor, updateSessionToDB } from './sqlite';
 import { getSessionFromEnv } from './garmin_session_env';
 import { migrateGarminWellnessByDateRange, syncGarminWellnessRecentDays } from './garmin_wellness';
+import { migrateGarminWeightByDateRange, syncGarminWeightRecentDays } from './garmin_weight';
 
 const { GarminConnect } = require('@gooin/garmin-connect');
 
@@ -176,6 +177,7 @@ export const migrateAllGarminGlobal2GarminCN = async (count = 200) => {
 
     await migrateGarminGlobalActivities2GarminCN(clientGlobal, clientCn, count);
     await migrateGarminWellnessByDateRange(clientGlobal, clientCn);
+    await migrateGarminWeightByDateRange(clientGlobal, clientCn);
 };
 
 export const syncGarminGlobalActivities2GarminCN = async (
@@ -270,4 +272,5 @@ export const syncAllGarminGlobal2GarminCN = async () => {
 
     await syncGarminGlobalActivities2GarminCN(clientGlobal, clientCN);
     await syncGarminWellnessRecentDays(clientGlobal, clientCN);
+    await syncGarminWeightRecentDays(clientGlobal, clientCN);
 };

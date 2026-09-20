@@ -16,7 +16,7 @@ services:
     #   yarn sync_global                 同步：国际区 → 国区
     #   yarn migrate_garmin_cn_to_global 迁移历史数据：国区 → 国际区
     #   yarn migrate_garmin_global_to_cn 迁移历史数据：国际区 → 国区
-    command: yarn sync_cn
+    command: yarn sync_all_global_to_cn
     logging:
       driver: "json-file"
       options:
