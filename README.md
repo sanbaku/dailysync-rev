@@ -33,9 +33,17 @@ github:
 如果你懂一点代码，会使用 docker 可以使用此方案。
 
 ### 拉取代码
-目前没有提供打包好的镜像，需要拉取下来自行打包使用
+本 fork 已通过 GitHub Actions 自动构建并发布 GHCR 镜像，镜像地址为：
+
+```text
+ghcr.io/sanbaku/dailysync-rev:latest
+```
+
+普通 Docker 主机可以拉取源码自行构建；极空间等只能通过 Docker Compose 页面部署的环境，直接使用上面的镜像即可，不需要源码、Dockerfile 或底层 Docker 命令。
+
+源码地址：
 ```shell
-git clone https://github.com/gooin/dailysync-rev.git
+git clone https://github.com/sanbaku/dailysync-rev.git
 ```
 ### 修改配置文件
 复制模板文件为 `.env`（`cp .env.example .env`），按注释填入信息。Docker 运行会通过 `docker-compose.yml` 的 `env_file` 读取 `.env`；本地 `yarn` 运行也会自动读取项目根目录的 `.env`。
@@ -65,6 +73,13 @@ GARMIN_WELLNESS_MIGRATE_DAYS=0
 
 # 历史迁移从今天往前跳过多少天开始；0 表示从今天开始
 GARMIN_WELLNESS_MIGRATE_START_DAYS=0
+
+# 体重同步；历史体重已经迁移完成时，只开启日常同步
+GARMIN_SYNC_WEIGHT=true
+GARMIN_WEIGHT_SYNC_DAYS=3
+
+# 常驻 Docker 模式的同步间隔（小时）：1=每小时，0.5=每半小时
+GARMIN_SYNC_INTERVAL_HOURS=1
 ```
 
 | 参数 | 说明 | 默认 |
@@ -81,12 +96,21 @@ GARMIN_WELLNESS_MIGRATE_START_DAYS=0
 | `GARMIN_WELLNESS_SYNC_DAYS` / `GARMIN_WELLNESS_SYNC_DAYS_DEFAULT` | 日常同步时检查最近几天的健康数据 | 1 |
 | `GARMIN_WELLNESS_MIGRATE_DAYS` / `GARMIN_WELLNESS_MIGRATE_DAYS_DEFAULT` | 历史迁移健康数据天数（0 表示不迁移） | 0 |
 | `GARMIN_WELLNESS_MIGRATE_START_DAYS` / `GARMIN_WELLNESS_MIGRATE_START_DAYS_DEFAULT` | 历史健康数据迁移跳过的起始天数（0 表示从今天开始） | 0 |
+| `GARMIN_SYNC_WEIGHT` | 日常体重同步开关 | false |
+| `GARMIN_WEIGHT_SYNC_DAYS` | 日常同步时检查最近几天的体重记录 | 3 |
+| `GARMIN_WEIGHT_MIGRATE_DAYS` | 历史体重迁移天数；0 表示不迁移 | 0 |
+| `GARMIN_WEIGHT_MIGRATE_START_DAYS` | 历史体重迁移跳过的起始天数 | 0 |
+| `GARMIN_SYNC_INTERVAL_HOURS` | 常驻 Docker 模式的同步间隔，支持 1 或 0.5 | 1 |
 
 注意：`.env` 的值不要带引号或分号——`docker run --env-file` 不会剥引号、分号会被当成值的一部分（会变成错误密码或 NaN 参数）。
 
 ### 修改docker-compose.yml 文件
 
-修改 `docker-compose.yml` 中 `services.daily-sync.command` 的值即可决定每次启动执行的功能，默认是国区同步到国际区（`yarn sync_cn`）。普通 `sync_*` 只同步活动数据；`sync_all_*` 是复合同步入口，会先同步活动数据，再在 `GARMIN_SYNC_WELLNESS=true` 时同步 Wellness 健康数据。
+极空间 Compose 页面使用镜像部署时，只需要 `docker-compose.yml` 和 `.env`。项目目录中如果没有 `db/garmin.db`，程序首次启动会自动创建；该文件保存登录会话和同步游标，不是历史 Garmin 数据。
+
+当前 fork 的极空间 Compose 配置会拉取 `ghcr.io/sanbaku/dailysync-rev:latest`，启动一个 `daily-sync` 常驻容器：启动后立即同步，随后按 `GARMIN_SYNC_INTERVAL_HOURS` 自动运行。该服务不提供网页接口，因此不需要配置端口。
+
+普通 `sync_*` 只同步活动数据；`sync_all_*` 是一次性同步入口，会同步活动、Wellness 和体重数据。常驻 Docker 部署使用 `yarn daemon`，不需要每天运行历史迁移命令。
 
 历史迁移同理：`migrate_garmin_*` 只迁移活动数据；`migrate_wellness_*` 只迁移 Wellness 健康数据；`migrate_all_*` 会迁移活动数据和 Wellness 健康数据。
 
@@ -162,13 +186,23 @@ yarn migrate_wellness_cn_to_global
 yarn migrate_wellness_global_to_cn
 ```
 
-### 打包运行一次项目
+### 本地构建并运行一次项目
 ```shell
-docker-compose up
+docker compose up --build
 ```
 
-### 配置系统定时任务
-参照下文中的 `定时任务(Linux Only)`，把命令替换成使用
+### 极空间 Compose 镜像部署
+
+极空间不能执行底层 Docker 命令时，直接在 Docker Compose 页面使用仓库中的 `docker-compose.yml`。该文件已经使用 GHCR 镜像，不需要在极空间构建源码：
+
+```text
+ghcr.io/sanbaku/dailysync-rev:latest
+```
+
+同一个 Compose 项目目录放置 `.env` 即可；`db/garmin.db` 不存在时会自动创建。部署后只启动 `daily-sync` 一个容器，容器会自动常驻运行并按 `GARMIN_SYNC_INTERVAL_HOURS` 同步，不需要系统定时任务。
+
+### 手动启动已存在的容器（旧版部署方式）
+如果使用的是旧版一次性容器，可以使用：
 ```shell
 docker start daily-sync
 ```
