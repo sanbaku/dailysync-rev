@@ -1,28 +1,36 @@
 services:
+  # 日常同步服务：极空间只需要启动这个服务。
+  # 容器启动后立即同步一次，之后按照 GARMIN_SYNC_INTERVAL_HOURS 自动循环。
   daily-sync:
     image: 'daily-sync:latest'
+    # 第一次部署或代码更新后使用 --build，确保使用最新源码构建镜像。
     build:
       context: ./
       dockerfile: Dockerfile
+    # 账号密码等敏感配置从项目目录下的 .env 读取，不要写进 compose 文件。
     env_file:
       - .env
+    # 左侧是极空间项目目录中的文件夹，右侧是容器内路径。
+    # db/garmin.db 保存登录会话和同步游标，必须持久化。
+    # log 保存失败记录和运行日志。
     volumes:
       - ./db:/app/db
       - ./log:/app/log
     container_name: daily-sync
+    # 极空间或 Docker 重启后自动恢复。
     restart: unless-stopped
     tty: true
-    # 每次容器启动执行的功能（默认国区同步到国际区），可选：
-    #   yarn sync_cn                     同步：国区 → 国际区（默认）
-    #   yarn sync_global                 同步：国际区 → 国区
-    #   yarn migrate_garmin_cn_to_global 迁移历史数据：国区 → 国际区
-    #   yarn migrate_garmin_global_to_cn 迁移历史数据：国际区 → 国区
+    # 常驻同步模式：启动后立即执行一次，之后每隔指定时间同步一次。
+    # 间隔由 .env 中的 GARMIN_SYNC_INTERVAL_HOURS 控制，支持 1 或 0.5。
     command: yarn daemon
     logging:
       driver: "json-file"
       options:
+        # 防止 Docker 日志无限增长。
         max-size: "10m"
 
+  # 可选工具服务，不会被默认启动；日常部署不需要启动它。
+  # 需要时执行：docker compose --profile tools run --rm export-garmin-sessions
   export-garmin-sessions:
     image: 'daily-sync:latest'
     build:
