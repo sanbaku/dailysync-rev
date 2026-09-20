@@ -6,6 +6,7 @@
   "scripts": {
     "test": "ts-node src/test.ts",
     "rq": "ts-node src/rq.ts",
+    "daemon": "ts-node src/daemon.ts",
     "sync_cn": "ts-node src/sync_garmin_cn_to_global.ts",
     "sync_global": "ts-node src/sync_garmin_global_to_cn.ts",
     "sync_all_cn_to_global": "ts-node src/sync_all_garmin_cn_to_global.ts",
