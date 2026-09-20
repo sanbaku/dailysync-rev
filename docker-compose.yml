@@ -2,11 +2,9 @@ services:
   # 日常同步服务：极空间只需要启动这个服务。
   # 容器启动后立即同步一次，之后按照 GARMIN_SYNC_INTERVAL_HOURS 自动循环。
   daily-sync:
-    image: 'daily-sync:latest'
-    # 第一次部署或代码更新后使用 --build，确保使用最新源码构建镜像。
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    # 镜像由 GitHub Actions 根据 main 分支自动构建并发布到 GHCR。
+    # 极空间 Compose 页面只需要拉取这个镜像，不需要源码或 Dockerfile。
+    image: ghcr.io/sanbaku/dailysync-rev:latest
     # 账号密码等敏感配置从项目目录下的 .env 读取，不要写进 compose 文件。
     env_file:
       - .env
@@ -28,18 +26,3 @@ services:
       options:
         # 防止 Docker 日志无限增长。
         max-size: "10m"
-
-  # 可选工具服务，不会被默认启动；日常部署不需要启动它。
-  # 需要时执行：docker compose --profile tools run --rm export-garmin-sessions
-  export-garmin-sessions:
-    image: 'daily-sync:latest'
-    build:
-      context: ./
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    volumes:
-      - ./db:/app/db
-    profiles:
-      - tools
-    command: yarn export_garmin_sessions
