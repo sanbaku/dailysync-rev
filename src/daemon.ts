@@ -3,7 +3,7 @@ import axios from 'axios';
 import { BARK_KEY_DEFAULT } from './constant';
 import { syncAllGarminGlobal2GarminCN } from './utils/garmin_global';
 
-const intervalHours = Math.max(1, Number(process.env.GARMIN_SYNC_INTERVAL_HOURS ?? '2'));
+const intervalHours = Math.max(0.5, Number(process.env.GARMIN_SYNC_INTERVAL_HOURS ?? '1'));
 const intervalMs = intervalHours * 60 * 60 * 1000;
 const barkKey = process.env.BARK_KEY ?? BARK_KEY_DEFAULT;
 let stopping = false;
