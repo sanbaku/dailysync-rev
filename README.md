@@ -41,6 +41,26 @@ ghcr.io/sanbaku/dailysync-rev:latest
 
 普通 Docker 主机可以拉取源码自行构建；极空间等只能通过 Docker Compose 页面部署的环境，直接使用上面的镜像即可，不需要源码、Dockerfile 或底层 Docker 命令。
 
+### GitHub Actions 发布镜像
+
+仓库中的 `.github/workflows/publish-image.yml` 负责构建和发布镜像，发布流程如下：
+
+1. 向 `main` 分支推送代码，或在仓库的 `Actions` 页面手动运行 `Publish Docker image`。
+2. GitHub Actions 使用仓库中的 `Dockerfile` 构建应用镜像。
+3. Actions 使用自动生成的 `GITHUB_TOKEN` 登录 GitHub Container Registry（GHCR）。不需要把 Garmin 账号、密码或 `.env` 放进 GitHub Actions。
+4. 构建成功后发布两个标签：
+
+```text
+ghcr.io/sanbaku/dailysync-rev:latest
+ghcr.io/sanbaku/dailysync-rev:sha-<commit>
+```
+
+5. 极空间 Compose 使用 `ghcr.io/sanbaku/dailysync-rev:latest` 拉取镜像。
+
+首次发布后，请在 GitHub 的 `Profile → Packages → dailysync-rev → Package settings` 中确认容器包为 `Public`，这样极空间不需要登录 GHCR 就能拉取。以后代码推送到 `main` 后，Actions 会自动构建新的 `latest` 镜像；极空间重新部署或重新拉取镜像即可更新。
+
+该 Actions 只负责构建和发布镜像，不负责访问 Garmin，也不会执行你的同步任务。Garmin 账号密码只放在极空间 Compose 项目的 `.env` 中。
+
 源码地址：
 ```shell
 git clone https://github.com/sanbaku/dailysync-rev.git
@@ -75,6 +95,7 @@ GARMIN_WELLNESS_MIGRATE_DAYS=0
 GARMIN_WELLNESS_MIGRATE_START_DAYS=0
 
 # 体重同步；历史体重已经迁移完成时，只开启日常同步
+# 日常体重同步：开启；每次检查最近 3 天，避免错过延迟上传的体重记录。
 GARMIN_SYNC_WEIGHT=true
 GARMIN_WEIGHT_SYNC_DAYS=3
 
